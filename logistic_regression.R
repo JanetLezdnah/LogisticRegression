@@ -24,7 +24,7 @@
 
 ##   Load the National Health Interview Survey data:
 
-NH11 <- readRDS("dataSets/NatHealth2011.rds")
+NH11 <- readRDS("NatHealth2011.rds")
 labs <- attributes(NH11)$labels
 
 ##   [CDC website] http://www.cdc.gov/nchs/nhis.htm
@@ -75,6 +75,8 @@ predDat <- with(NH11,
                             sex = "2 Female",
                             bmi = mean(bmi, na.rm = TRUE),
                             sleep = mean(sleep, na.rm = TRUE)))
+str(predDat)
+head(predDat)
 # predict hypertension at those levels
 cbind(predDat, predict(hyp.out, type = "response",
                        se.fit = TRUE, interval="confidence",
@@ -89,7 +91,9 @@ cbind(predDat, predict(hyp.out, type = "response",
 
 ##   Instead of doing all this ourselves, we can use the effects package to
 ##   compute quantities of interest for us (cf. the Zelig package).
-
+install.packages("devtools")
+devtools::install_github("duckmayr/oldr")
+oldr::install.compatible.packages("effects")
 library(effects)
 plot(allEffects(hyp.out))
 
@@ -106,3 +110,37 @@ plot(allEffects(hyp.out))
 ##   Note that the data is not perfectly clean and ready to be modeled. You
 ##   will need to clean up at least some of the variables before fitting
 ##   the model.
+str(NH11$everwrk)
+levels(NH11$everwrk)
+NH11$everwrk <- factor(NH11$everwrk, levels=c("2 No", "1 Yes"))
+# run our regression model
+everw.out <- glm(everwrk~age_p+r_maritl,
+               data=NH11, family="binomial")
+coef(summary(everw.out))
+
+everw.out.tab <- coef(summary(everw.out))
+everw.out.tab[, "Estimate"] <- exp(coef(everw.out))
+everw.out.tab
+
+predDat <- with(NH11, expand.grid(r_maritl = c("1 Married - spouse in household",
+                                               "2 Married - spouse not in household",
+  #                                             "3 Married - spouse in household unknown",
+                                               "4 Widowed",
+                                               "5 Divorced",
+                                               "6 Separated",
+                                               "7 Never married",
+                                               "8 Living with partner",
+                                               "9 Unknown marital status"), 
+          age_p = mean(age_p, na.rm = TRUE)))
+str(predDat)
+head(predDat)
+# predict everwork at those levels
+cbind(predDat, predict(everw.out, type = "response",
+                       se.fit = TRUE, interval="confidence",
+                       newdata = predDat))
+plot(allEffects(everw.out))
+#library(dplyr)
+#counts <- NH11$r_maritl %>% 
+#  lapply(table) %>% 
+#  lapply(as.data.frame)
+#counts
